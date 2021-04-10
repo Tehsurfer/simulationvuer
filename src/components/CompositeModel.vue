@@ -1,30 +1,31 @@
 <template>
   <div class="simulation-vuer">
     <el-container class="main">
-      <el-aside width="212px">
-        <p class="header input-parameters">Input parameters</p>
-        <p class="header simulation-mode">Simulation mode</p>
-        <el-select class="mode" popper-class="mode-popper" :popper-append-to-body="false" v-model="mode" size="mini" @change="modeChanged()">
-          <el-option v-for="mode in modes" :key="mode.value" :label="mode.label" :value="mode.value" />
-        </el-select>
-        <p class="header simulation-level">Stimulation level</p>
-        <div class="slider">
-          <el-slider v-model="level" :max="10" :show-tooltip="false" :show-input="false" :disabled="mode == 0" />
-          <el-input-number v-model="level" size="mini" :controls="false" :min="0" :max="10" :disabled="mode == 0" />
-        </div>
-        <div class="run-simulation">
-          <el-button type="primary" size="mini" @click="runSimulation()">Run simulation</el-button>
-        </div>
-        <div class="run-on-osparc">
-          <el-button size="mini" @click="goToOsparc()">Run on oSPARC</el-button>
-        </div>
-        <div class="run-on-osparc">
-          <el-button size="mini" @click="compositeModelButton">{{modelButtonText}} </el-button>
-        </div>
+      <el-aside v-for="(model, index) in entry" width="212px" :key="index">
+        <div :key="index">
+          <p class="header input-parameters">{{model.info.title}}</p>
+          <p class="header input-parameters">Input parameters</p>
+          <p class="header simulation-mode">Simulation mode</p>
+          <el-select class="mode" popper-class="mode-popper" :popper-append-to-body="false" v-model="mode" size="mini" @change="modeChanged()">
+            <el-option v-for="mode in modes" :key="mode.value" :label="mode.label" :value="mode.value" />
+          </el-select>
+          <p class="header simulation-level">Stimulation level</p>
+          <div class="slider">
+            <el-slider v-model="level" :max="10" :show-tooltip="false" :show-input="false" :disabled="mode == 0" />
+            <el-input-number v-model="level" size="mini" :controls="false" :min="0" :max="10" :disabled="mode == 0" />
+          </div>
+          <div class="run-simulation">
+            <el-button type="primary" size="mini" @click="runSimulation()">Run simulation</el-button>
+          </div>
+          <div class="run-on-osparc">
+            <el-button size="mini" @click="goToOsparc()">Run on oSPARC</el-button>
+          </div>
+         </div>
       </el-aside>
       <el-container class="plot-vuer">
-        <Running :active.sync="runningActive" :is-full-page="runningFullPage" :color="runningColor" />
-        <PlotVuer class="plot-vuer" :dataInput="data" plotType="plotly-only" />
+          <Running :active.sync="runningActive" :is-full-page="runningFullPage" :color="runningColor" />
+          <PlotVuer class="plot-vuer" :dataInput="data" plotType="plotly-only" />
+          
       </el-container>
     </el-container>
   </div>
@@ -81,24 +82,13 @@ export default {
     Running,
   },
   props:{
-    compositeEntry: {
-      type: Object,
-      default:()=>{ 
-        return {
-          id: 0,
-          status: 'single',
-          enabled: false
-        }
-      }
+    entry: {
+      type: Array,
+      default:()=>[]
     }
   },
   data: function () {
     return {
-      info: {
-        title: 'Fabbri et al. (2017)',
-        inputs: ['x','y', 'z'],
-        outputs: ['x','y','z'],
-      },
       level: 0,
       runningActive: false,
       runningColor: "#8300bf",
@@ -124,12 +114,6 @@ export default {
       data: NoData,
     };
   },
-  computed:{
-    modelButtonText: function(){
-      let index = this.statusTrack.indexOf(this.compositeEntry.status)
-      return this.modelButtonTextTrack[index]
-    }
-  },
   methods: {
     goToOsparc() {
       window.open("https://osparc.io/", "_blank");
@@ -142,7 +126,6 @@ export default {
       let newIndex = (this.statusTrack.indexOf(this.compositeEntry.status)+1)%this.statusTrack.length
       let output = {...this.compositeEntry}
       output.status = this.statusTrack[newIndex]
-      output.info = this.info
       this.$emit('compositeOutput', output)
     },
     runSimulation() {
