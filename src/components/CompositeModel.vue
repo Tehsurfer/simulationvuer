@@ -3,26 +3,55 @@
     <el-container class="main">
       <el-aside v-for="(model, index) in entry" width="212px" :key="index">
         <div :key="index">
+          <p class="header input-parameters">Model {{model.id+1}}</p>
           <p class="header input-parameters">{{model.info.title}}</p>
-          <p class="header input-parameters">Input parameters</p>
-          <p class="header simulation-mode">Simulation mode</p>
-          <el-select class="mode" popper-class="mode-popper" :popper-append-to-body="false" v-model="mode" size="mini" @change="modeChanged()">
-            <el-option v-for="mode in modes" :key="mode.value" :label="mode.label" :value="mode.value" />
-          </el-select>
-          <p class="header simulation-level">Stimulation level</p>
-          <div class="slider">
-            <el-slider v-model="level" :max="10" :show-tooltip="false" :show-input="false" :disabled="mode == 0" />
-            <el-input-number v-model="level" size="mini" :controls="false" :min="0" :max="10" :disabled="mode == 0" />
+          <div class="params">
+            <div class="params-left">
+              Input Parameters
+              <div v-for="(input, i) in model.info.inputs" :key="i">
+                <span class="input-grid">
+                  <div class="rad-label">{{input}}</div>
+                  <staged-radio :stage="radios[index].inputy[i]" :color="i" :label="input" @click.native="radioInClick(index, 'inputy', i)" :key="i"/>
+                </span>
+              </div>
+            </div>
+            <div class="params-right">
+              Output Parameters
+              <div v-for="(output, i) in model.info.outputs" :key="'out'+i">
+                <span class="input-grid">
+                  <div class="rad-label">{{output}}</div>
+                  <staged-radio :stage="radios[index].outputy[i]" :color="i" @click.native="radioInClick(index, 'outputy', i)"/>
+                </span>
+              </div>
+            </div>
           </div>
-          <div class="run-simulation">
-            <el-button type="primary" size="mini" @click="runSimulation()">Run simulation</el-button>
+  
+          
+          <staged-radio v-if="index === 0"  class="sim-radio" :stage="uiStage" :color="uiRadioColor" @click.native="uiRadio"/>
+          
+          <div v-if="index === 0" class="sim-controls" v-bind:class="{ 'disabled': uiStage < 3 }">
+            <p class="header simulation-mode">
+              Simulation mode
+            </p>
+            <el-select class="mode" popper-class="mode-popper" :popper-append-to-body="false" v-model="mode" size="mini" @change="modeChanged()">
+              <el-option v-for="mode in modes" :key="mode.value" :label="mode.label" :value="mode.value" />
+            </el-select>
+            <p class="header simulation-level">Stimulation level</p>
+            <div class="slider">
+              <el-slider v-model="level" :max="10" :show-tooltip="false" :show-input="false" :disabled="mode == 0" />
+              <el-input-number v-model="level" size="mini" :controls="false" :min="0" :max="10" :disabled="mode == 0" />
+            </div>
+            
           </div>
-          <div class="run-on-osparc">
-            <el-button size="mini" @click="goToOsparc()">Run on oSPARC</el-button>
-          </div>
+          <div v-if="index === 0"  class="run-simulation" ref="run">
+              <el-button type="primary" size="mini" @click="runSimulation()">Run simulation</el-button>
+            </div>  
+            <div v-if="index === 0"  class="run-on-osparc">
+              <el-button size="mini" @click="goToOsparc()">Run on oSPARC</el-button>
+            </div>
          </div>
       </el-aside>
-      <el-container class="plot-vuer">
+      <el-container class="plot-vuer" ref="plot">
           <Running :active.sync="runningActive" :is-full-page="runningFullPage" :color="runningColor" />
           <PlotVuer class="plot-vuer" :dataInput="data" plotType="plotly-only" />
           
@@ -33,11 +62,13 @@
 
 <script>
 import Vue from "vue";
+import StagedRadio from "./StagedRadio.vue"
 import Running from "vue-loading-overlay";
 import "vue-loading-overlay/dist/vue-loading.css";
 import { PlotVuer } from "@abi-software/plotvuer";
+import LeaderLine from 'leader-line'
 import "@abi-software/plotvuer/dist/plotvuer.css";
-import { Aside, Button, Container, InputNumber, Main, Option, Select, Slider } from "element-ui";
+import { Aside, Button, Container, InputNumber, Main, Option, Select, Slider, Row, Col, Radio} from "element-ui";
 import SinusData from "@/../data/sinus.json";
 import Stellate_00_Data from "@/../data/stellate_00.json";
 import Stellate_01_Data from "@/../data/stellate_01.json";
@@ -74,12 +105,24 @@ Vue.use(Main);
 Vue.use(Option);
 Vue.use(Select);
 Vue.use(Slider);
+Vue.use(Row);
+Vue.use(Col);
+Vue.use(Radio)
+
+var flipType = function(type){
+  if (type === 'outputy'){
+    return 'inputy'
+  } else {
+    return 'outputy'
+  }
+}
 
 export default {
   name: "SimulationVuer",
   components: {
     PlotVuer,
     Running,
+    StagedRadio
   },
   props:{
     entry: {
@@ -94,6 +137,11 @@ export default {
       runningColor: "#8300bf",
       runningFullPage: false,
       runningTimeout: 789,
+      radio: 0,
+      radios: [{inputy: [0,0,0], outputy: [0,0,0]},{inputy: [0,0,0], outputy: [0,0,0]}],
+      uiStage: 0,
+      uiRadioColor: 0,
+      lastIndex: 0,
       statusTrack: ['single', 'linking', 'linked'],
       modelButtonTextTrack: ["Composite Model", "Ready to link...", "linked!"],
       mode: 0,
@@ -116,10 +164,80 @@ export default {
   },
   methods: {
     goToOsparc() {
-      window.open("https://osparc.io/", "_blank");
+      // window.open("https://osparc.io/", "_blank");
+      new LeaderLine(
+        this.$refs.run,
+        this.$refs.plot
+      );
     },
     modeChanged() {
       this.data = NoData;
+    },
+    radioInClick(index, type, i){
+     
+      let len = this.radios.length
+
+      // parameter set for linking
+      if (this.radios[index][type][i] === 0){
+        Vue.set(this.radios[index][type], i, 1)
+        Vue.set(this.radios[(index+1)%len][flipType(type)], i, 2)
+        if(type === 'inputy'){
+          this.uiStage = 2
+          this.uiRadioColor = i
+          this.lastIndex = index
+        }
+      } 
+
+      // link cancelled
+      else if (this.radios[index][type][i] === 1){
+        Vue.set(this.radios[index][type], i, 0)
+        Vue.set(this.radios[(index+1)%len][flipType(type)], i, 0)
+        this.uiStage = 0
+        this.uiRadioColor = i
+      } 
+
+      // paramter linked
+      else if (this.radios[index][type][i] === 2){
+        Vue.set(this.radios[index][type], i, 3)
+        Vue.set(this.radios[(index+1)%len][flipType(type)], i, 3)
+      } 
+
+      // paramter removed
+      else if (this.radios[index][type][i] === 3){
+        Vue.set(this.radios[index][type], i, 0)
+        Vue.set(this.radios[(index+1)%len][flipType(type)], i, 0)
+        this.uiStage = 0
+      }
+     
+    },
+    uiRadio: function(){
+      
+      let li = this.lastIndex
+
+      // If being linked
+      if(this.uiStage === 2){
+        this.uiStage = 3
+        
+        Vue.set(this.radios[li]['inputy'], this.uiRadioColor, 3)
+      }
+
+      // if resetting
+      else if(this.uiStage === 3){
+        this.uiStage = 0
+        Vue.set(this.radios[li]['inputy'], this.uiRadioColor, 0)
+      }
+      this.resetRadio()
+    },
+    resetRadio: function(){
+      for(let i in this.radios){
+        for( let j in this.radios[i]){
+          for (let k in this.radios[i][j]){
+            if (this.radios[i][j][k] === 2){
+              Vue.set(this.radios[i][j], k, 0)
+            }
+          }
+        }
+      }
     },
     compositeModelButton(){
       // go to next status in track
@@ -156,6 +274,38 @@ export default {
 <!-- Add "scoped" attribute to limit CSS to this component only -->
 <style scoped>
 @import url("//unpkg.com/element-ui@2.14.1/lib/theme-chalk/index.css");
+
+.params {
+  padding-top: 18px;
+  position: relative;
+  display: flex;
+}
+
+.params-left{
+  flex: 1
+}
+
+.params-right {
+  flex: 1.3;
+  padding-left: 6px;
+}
+
+.input-grid{
+  display: grid;
+  grid-template-columns: 1fr 10fr;
+grid-gap: 6px;
+}
+
+.sim-controls{
+  border: 1px solid #DCDFE6;
+  cursor: auto;
+}
+
+.disabled{
+  opacity: 50%;
+  cursor:not-allowed;
+}
+
 >>> .el-aside {
   padding: 12px 20px 12px 12px;
 }
