@@ -66,7 +66,6 @@ import StagedRadio from "./StagedRadio.vue"
 import Running from "vue-loading-overlay";
 import "vue-loading-overlay/dist/vue-loading.css";
 import { PlotVuer } from "@abi-software/plotvuer";
-import LeaderLine from 'leader-line'
 import "@abi-software/plotvuer/dist/plotvuer.css";
 import { Aside, Button, Container, InputNumber, Main, Option, Select, Slider, Row, Col, Radio} from "element-ui";
 import SinusData from "@/../data/sinus.json";
@@ -164,11 +163,7 @@ export default {
   },
   methods: {
     goToOsparc() {
-      // window.open("https://osparc.io/", "_blank");
-      new LeaderLine(
-        this.$refs.run,
-        this.$refs.plot
-      );
+      window.open("https://osparc.io/", "_blank");
     },
     modeChanged() {
       this.data = NoData;
@@ -299,10 +294,11 @@ grid-gap: 6px;
 .sim-controls{
   border: 1px solid #DCDFE6;
   cursor: auto;
+  opacity: 1;
 }
 
 .disabled{
-  opacity: 50%;
+  opacity: 0.5;
   cursor:not-allowed;
 }
 
